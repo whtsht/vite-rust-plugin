@@ -1,0 +1,21 @@
+{
+  "name": "vite-rust-plugin",
+  "version": "1.0.0",
+  "description": "Vite plugin for Rust",
+  "main": "./src/plugin.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rust",
+    "vite",
+    "wasm"
+  ],
+  "author": "White Shirt",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "child_process": "^1.0.2",
+    "watchpack": "^2.3.1"
+  }
+}
