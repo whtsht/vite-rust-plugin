@@ -2,7 +2,7 @@ const Watchpack = require('watchpack');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
+const { spawnSync } = require('child_process');
 const { resolve } = require('path');
 
 class ViteRustPlugin {
@@ -19,16 +19,15 @@ class ViteRustPlugin {
         if (options.extraFiles) this.watchFiles.concat(options.extraFiles);
         this.watchDir = [path.resolve(this.crateDir, 'src')];
         if (options.extraDirs) this.watchDir.concat(options.extraDirs);
+        this.detailLog = options.detailLog || true;
 
         if (!this.isBuild()) {
             this.wp = new Watchpack();
-
             this.wp.watch({
                 files: this.watchFiles,
                 directories: this.watchDir,
                 startTime: Date.now() - 10000,
             });
-
             this.wp.on('change', () => {
                 this.compile();
             });
@@ -63,6 +62,7 @@ class ViteRustPlugin {
     }
 
     compile() {
+        console.log('🦀 Rust & ⚡ Vite = ❤ \nCompiling...\n');
         const options = new Array();
         options.push(
             'build',
@@ -78,27 +78,38 @@ class ViteRustPlugin {
         if (this.extraArgs) {
             options.push(this.extraArgs);
         }
-        const sp = spawn('wasm-pack', options);
+        const sp = spawnSync('wasm-pack', options);
 
-        sp.stdout.on('data', (data) => {
-            process.stdout.write(`${data}`);
-        });
-
-        sp.stderr.on('data', (data) => {
-            process.stdout.write(`${data}`);
-        });
-
-        sp.on('error', (error) => {
-            process.stdout.write(`${error.message}`);
-        });
-
-        sp.on('close', (code) => {
-            if (code === 0) {
-                console.log(chalk.blue('Compilation was successful.'));
-            } else {
-                console.log(chalk.red('Failed to compile.'));
+        if (this.detailLog) {
+            process.stdout.write(sp.stdout.toString());
+            process.stdout.write(sp.output[2].toString());
+        }
+        if (sp.status === 0) {
+            console.log(chalk.blue('Compilation was successful.'));
+        } else {
+            if (!this.detailLog) {
+                process.stdout.write(sp.stdout.toString());
+                process.stdout.write(sp.output[2].toString());
             }
-        });
+            console.log(chalk.red('Failed to compile.'));
+            this.createFake();
+        }
+    }
+
+    createFake() {
+        const outDir = path.resolve(this.crateDir, this.outDir);
+        try {
+            fs.mkdirSync(outDir, { recursive: true });
+        } catch (e) {
+            if (e.code !== 'EEXIST') {
+                throw e;
+            }
+        }
+
+        fs.writeFileSync(
+            path.join(outDir, this.outName + '.js'),
+            'export default function init() { console.error("Failed to compile. Fix rust code."); }'
+        );
     }
 }
 
