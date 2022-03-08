@@ -8,5 +8,5 @@ extern "C" {
 
 #[wasm_bindgen(start)]
 pub fn start() {
-    log("hello wasm :) Yeah!");
+    log("hello wasm :)");
 }
