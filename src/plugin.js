@@ -2,16 +2,22 @@ const Watchpack = require('watchpack');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
-const { spawnSync } = require('child_process');
+const { spawn } = require('child_process');
 const { resolve } = require('path');
+
+function orDefault(value, defaultValue) {
+    return typeof value === 'undefined' ? defaultValue : value;
+}
 
 class ViteRustPlugin {
     constructor(options) {
         this.crateDir = options.crateDir;
-        this.outDir = options.outDir || 'pkg';
-        this.outName = options.outName || 'index';
-        this.profile = options.profile || this.profiling() || '--release';
-        this.target = options.target || 'web';
+        this.outDir = orDefault(options.outDir, 'pkg');
+        this.outName = orDefault(options.outName, 'index');
+        this.profile = orDefault(
+            options.profile,
+            orDefault(this.profiling(), '--release')
+        );
         this.extraArgs = options.extraArgs
             ? options.extraArgs.split(' ')
             : undefined;
@@ -19,7 +25,7 @@ class ViteRustPlugin {
         if (options.extraFiles) this.watchFiles.concat(options.extraFiles);
         this.watchDir = [path.resolve(this.crateDir, 'src')];
         if (options.extraDirs) this.watchDir.concat(options.extraDirs);
-        this.detailLog = options.detailLog || true;
+        this.detailLog = orDefault(options.detailLog, true);
 
         if (!this.isBuild()) {
             this.wp = new Watchpack();
@@ -62,7 +68,8 @@ class ViteRustPlugin {
     }
 
     compile() {
-        console.log('🦀 Rust & ⚡ Vite = ❤ \nCompiling...\n');
+        console.log('🦀 Rust & ⚡ Vite = ❤    Compiling...');
+        this.createEmpty();
         const options = new Array();
         options.push(
             'build',
@@ -73,27 +80,45 @@ class ViteRustPlugin {
             '--out-name',
             this.outName,
             '--target',
-            this.target
+            'web'
         );
         if (this.extraArgs) {
             options.push(this.extraArgs);
         }
-        const sp = spawnSync('wasm-pack', options);
+        const sp = spawn('wasm-pack', options);
 
-        if (this.detailLog) {
-            process.stdout.write(sp.stdout.toString());
-            process.stdout.write(sp.output[2].toString());
-        }
-        if (sp.status === 0) {
-            console.log(chalk.blue('Compilation was successful.'));
-        } else {
-            if (!this.detailLog) {
-                process.stdout.write(sp.stdout.toString());
-                process.stdout.write(sp.output[2].toString());
+        sp.stdout.on('data', (data) => {
+            if (this.detailLog) process.stdout.write(`${data}`);
+        });
+
+        sp.stderr.on('data', (data) => {
+            if (this.detailLog) process.stdout.write(`${data}`);
+        });
+
+        sp.on('close', (code) => {
+            if (code === 0) {
+                console.log(chalk.blue('Compilation was successful.'));
+            } else {
+                console.log(chalk.red('Failed to compile.'));
+                this.createFake();
             }
-            console.log(chalk.red('Failed to compile.'));
-            this.createFake();
+        });
+    }
+
+    createEmpty() {
+        const outDir = path.resolve(this.crateDir, this.outDir);
+        try {
+            fs.mkdirSync(outDir, { recursive: true });
+        } catch (e) {
+            if (e.code !== 'EEXIST') {
+                throw e;
+            }
         }
+
+        fs.writeFileSync(
+            path.join(outDir, this.outName + '.js'),
+            'export default function init() { console.log("Now compiling. Please wait..."); }'
+        );
     }
 
     createFake() {

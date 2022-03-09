@@ -8,7 +8,6 @@
     "reset": "npm run clean && rimraf node_modules"
   },
   "devDependencies": {
-    "@wasm-tool/wasm-pack-plugin": "^1.6.0",
     "rimraf": "^3.0.2",
     "vite": "^2.8.4",
     "vite-rust-plugin": "file:.."
