@@ -65,6 +65,7 @@ export default defineConfig({
 ```
 
 ### 3. Setting index.html
+The target bundle of wasm-pack build is not yet supported. Therefore, it is necessary to manually import using target web.
 
 ```html
 <!DOCTYPE html>
