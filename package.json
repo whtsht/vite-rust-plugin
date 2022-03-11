@@ -11,7 +11,7 @@
     "vite",
     "wasm"
   ],
-  "author": "White Shirt",
+  "author": "white-shirt",
   "license": "MIT",
   "dependencies": {
     "chalk": "^2.4.1",
