@@ -1,6 +1,6 @@
 {
   "name": "vite-rust-plugin",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Vite plugin for Rust",
   "main": "./src/plugin.js",
   "scripts": {
