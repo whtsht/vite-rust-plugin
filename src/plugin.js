@@ -1,29 +1,28 @@
-const Watchpack = require('watchpack');
-const chalk = require('chalk');
-const path = require('path');
-const fs = require('fs');
-const { spawn } = require('child_process');
-const { resolve } = require('path');
+const Watchpack = require("watchpack");
+const chalk = require("chalk");
+const path = require("path");
+const fs = require("fs");
+const { spawn, execSync } = require("child_process");
 
 function orDefault(value, defaultValue) {
-    return typeof value === 'undefined' ? defaultValue : value;
+    return typeof value === "undefined" ? defaultValue : value;
 }
 
 class ViteRustPlugin {
     constructor(options) {
         this.crateDir = options.crateDir;
-        this.outDir = orDefault(options.outDir, 'pkg');
-        this.outName = orDefault(options.outName, 'index');
+        this.outDir = orDefault(options.outDir, "pkg");
+        this.outName = orDefault(options.outName, "index");
         this.profile = orDefault(
             options.profile,
-            orDefault(this.profiling(), '--release')
+            orDefault(this.profiling(), "--release")
         );
         this.extraArgs = options.extraArgs
-            ? options.extraArgs.split(' ')
+            ? options.extraArgs.split(" ")
             : undefined;
-        this.watchFiles = [path.resolve(this.crateDir, 'Cargo.toml')];
+        this.watchFiles = [path.resolve(this.crateDir, "Cargo.toml")];
         if (options.extraFiles) this.watchFiles.concat(options.extraFiles);
-        this.watchDir = [path.resolve(this.crateDir, 'src')];
+        this.watchDir = [path.resolve(this.crateDir, "src")];
         if (options.extraDirs) this.watchDir.concat(options.extraDirs);
         this.detailLog = orDefault(options.detailLog, true);
 
@@ -34,11 +33,12 @@ class ViteRustPlugin {
                 directories: this.watchDir,
                 startTime: Date.now() - 10000,
             });
-            this.wp.on('change', () => {
+            this.wp.on("change", () => {
                 this.compile();
             });
+        } else {
+            this.compileSync();
         }
-        this.compile();
     }
 
     profiling() {
@@ -46,11 +46,11 @@ class ViteRustPlugin {
         process.argv.forEach((e) => {
             s.add(e);
         });
-        if (s.has('--mode')) {
-            if (s.has('development')) {
-                return '--dev';
-            } else if (s.has('production')) {
-                return '--release';
+        if (s.has("--mode")) {
+            if (s.has("development")) {
+                return "--dev";
+            } else if (s.has("production")) {
+                return "--release";
             }
         } else {
             return undefined;
@@ -60,46 +60,67 @@ class ViteRustPlugin {
     isBuild() {
         let _isBuild = false;
         process.argv.forEach((e) => {
-            if (e === 'build') {
+            if (e === "build") {
                 _isBuild = true;
             }
         });
         return _isBuild;
     }
 
-    compile() {
-        console.log('🦀 Rust & ⚡ Vite = ❤    Compiling...');
+    compileSync() {
+        console.log("🦀 Rust & ⚡ Vite = ❤    Compiling...");
         this.createEmpty();
         const options = new Array();
         options.push(
-            'build',
+            "build",
             this.crateDir,
             this.profile,
-            '--out-dir',
+            "--out-dir",
             this.outDir,
-            '--out-name',
+            "--out-name",
             this.outName,
-            '--target',
-            'web'
+            "--target",
+            "web"
         );
         if (this.extraArgs) {
             options.push(this.extraArgs);
         }
-        const sp = spawn('wasm-pack', options);
+        execSync("wasm-pack " + options.join(" "));
+    }
 
-        sp.stdout.on('data', (data) => {
+    compile() {
+        console.log("🦀 Rust & ⚡ Vite = ❤    Compiling...");
+        this.createEmpty();
+        const options = new Array();
+        options.push(
+            "build",
+            this.crateDir,
+            this.profile,
+            "--out-dir",
+            this.outDir,
+            "--out-name",
+            this.outName,
+            "--target",
+            "web"
+        );
+        if (this.extraArgs) {
+            options.push(this.extraArgs);
+        }
+        const sp = spawn("wasm-pack", options);
+
+        sp.stdout.on("data", (data) => {
             if (this.detailLog) process.stdout.write(`${data}`);
         });
 
-        sp.stderr.on('data', (data) => {
+        sp.stderr.on("data", (data) => {
             if (this.detailLog) process.stdout.write(`${data}`);
         });
 
-        sp.on('close', (code) => {
+        sp.on("close", (code) => {
             if (code === 0) {
-                console.log(chalk.blue('Compilation was successful.'));
+                console.log(chalk.blue("Compilation was successful."));
             } else {
-                console.log(chalk.red('Failed to compile.'));
+                console.log(chalk.red("Failed to compile."));
                 this.createFake();
             }
         });
@@ -110,13 +131,13 @@ class ViteRustPlugin {
         try {
             fs.mkdirSync(outDir, { recursive: true });
         } catch (e) {
-            if (e.code !== 'EEXIST') {
+            if (e.code !== "EEXIST") {
                 throw e;
             }
         }
 
         fs.writeFileSync(
-            path.join(outDir, this.outName + '.js'),
+            path.join(outDir, this.outName + ".js"),
             'export default function init() { console.log("Now compiling. Please wait..."); }'
         );
     }
@@ -126,13 +147,13 @@ class ViteRustPlugin {
         try {
             fs.mkdirSync(outDir, { recursive: true });
         } catch (e) {
-            if (e.code !== 'EEXIST') {
+            if (e.code !== "EEXIST") {
                 throw e;
             }
         }
 
         fs.writeFileSync(
-            path.join(outDir, this.outName + '.js'),
+            path.join(outDir, this.outName + ".js"),
             'export default function init() { console.error("Failed to compile. Fix rust code."); }'
         );
     }
