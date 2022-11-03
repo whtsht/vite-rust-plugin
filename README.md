@@ -100,16 +100,3 @@ vite --open
 ```sh
 vite build
 ```
-
-## Template
-
-You can use [vite-wasm-template](https://github.com/dfjk0/vite-wasm-template).
-
-Execute the following command.
-
-```sh
-git clone https://github.com/whtsht/vite-wasm-template.git
-cd vite-wasm-template
-npm install
-npm run dev
-```
